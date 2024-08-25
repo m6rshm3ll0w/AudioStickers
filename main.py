@@ -7,7 +7,10 @@ import logging
 import os
 import shutil
 from datetime import datetime
+import threading
 import sys
+from groq import Groq
+
 
 def clear():
     print("clearing --- OK")
@@ -26,35 +29,45 @@ def clear():
 thread = threading.Thread(target=clear)
 thread.start()
 
-
-
 print(f"\n\nSTARTING BOT PROCESS: ")
 start_time = time.time()
 print(f" > INITIALISE A BOT ..... ", end="")
 try:
     bot = telebot.TeleBot("7426229975:AAH46MNDug2wmHlOfhBlgUmL7SrjxhFX4gM")
     print("DONE")
-except Exception as e:
+except Exception as Except_:
     print("NO\n"
-          f"ERROR: {e}")
+          "\033[3m\033[31m{}\033[0m".format(f"[{datetime.now()}] ERROR: {Except_}"))
+    exit()
+
+print(f" > INITIALISE A GroqAPI ..... ", end="")
+try:
+    GroqCloudAPISECRETKEY = "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"
+    client = Groq(
+        api_key=GroqCloudAPISECRETKEY,
+    )
+    print("DONE")
+except Exception as Except_:
+    print("NO\n"
+          "\033[3m\033[31m{}\033[0m".format(f"[{datetime.now()}] ERROR: {Except_}"))
     exit()
 
 print(f" > CONNECTING TO DB ..... ", end="")
 try:
     conn = sqlite3.connect("Dbase.db3", check_same_thread=False)
     print("DONE")
-except Exception as e:
+except Exception as Except_:
     print("NO\n"
-          f"ERROR: {e}")
+          "\033[3m\033[31m{}\033[0m".format(f"[{datetime.now()}] ERROR: {Except_}"))
     exit()
 
 print(f" > CREATING DB CURSOR ... ", end="")
 try:
     cursor = conn.cursor()
     print("DONE")
-except Exception as e:
+except Exception as Except_:
     print("NO\n"
-          f"ERROR: {e}")
+          "\033[3m\033[31m{}\033[0m".format(f"[{datetime.now()}] ERROR: {Except_}"))
     exit()
 
 print(f" > INITIALISE ADMINS .... ", end="")
@@ -94,6 +107,38 @@ def ADDD_PHOTO(photo):
     return v
 
 
+def ADDD_Chatgpt(text):
+    print(f"    > render ask:{text}")
+
+    chat_completion = client.chat.completions.create(
+        messages=[
+            {
+                "role": "user",
+                "content": f"{text}",
+            }
+        ],
+        model="llama3-8b-8192",
+
+
+    )
+
+    ask = chat_completion.choices[0].message.content
+
+    if len(ask) > 43:
+        v = types.InlineQueryResultArticle(id="0", title="Chatgptask", description=f"{ask[:len(ask) - 43]}\n{ask[43:]}",
+                                           input_message_content=types.InputTextMessageContent(
+                                               message_text=f"---- ChatGpt ----\n"
+                                                            f"{ask}"))
+    else:
+        v = types.InlineQueryResultArticle(id="0", title="Chatgptask", description=f"{ask}",
+                                           input_message_content=types.InputTextMessageContent(
+                                               message_text=f"---- ChatGpt ----\n"
+                                                            f"{ask}"))
+
+
+    return v
+
+
 Search_icon = "https://cdn3.iconfinder.com/data/icons/feather-5/24/search-512.png"
 PAGE = 1
 
@@ -106,7 +151,34 @@ def handle_inline_query(query):
 
     if query_text:
 
-        if query_text.startswith("$"):
+        if query_text.startswith("&"):
+            print(">>> user usig chatgpt:\n")
+            query_text = query_text[1:]
+
+            if query_text.endswith("#"):
+                query_text = query_text[:1]
+                header = types.InlineQueryResultArticle(
+                    id='-1',
+                    title="Запрос к ChatGpt:",
+                    description=f"Промпт: {query_text}, подожди пару секунд и ничего не делай",
+                    input_message_content=types.InputTextMessageContent(message_text=f"Запрос к ChatGpt: "
+                                                                                     f"{query_text}"),
+                    thumbnail_url=Search_icon,
+                )
+                result.append(header)
+                result.append(ADDD_Chatgpt(query_text))
+            else:
+                header = types.InlineQueryResultArticle(
+                    id='-1',
+                    title="ChatGPT",
+                    description="В конце промпта напиши # для запроса",
+                    input_message_content=types.InputTextMessageContent(message_text=f"Запрос к ChatGpt: "
+                                                                                     f"{query_text}"),
+                    thumbnail_url=Search_icon,
+                )
+                result.append(header)
+
+        elif query_text.startswith("$"):
             print(">>> user searching genlist:\n")
             query_text = query_text[1:]
             if query_text != "":
@@ -239,8 +311,10 @@ def main_menu(message):
         adm = types.InlineKeyboardButton("👇👇Возможности админов👇👇", callback_data="0")
         edit_msg = types.InlineKeyboardButton("редактировать стикер", callback_data="edit_s")
         del_msg = types.InlineKeyboardButton("удалить стикер", callback_data="del_s")
+        ban = types.InlineKeyboardButton("Выдать бан", callback_data="banuser")
         markup.add(adm)
         markup.add(edit_msg, del_msg)
+        markup.add(ban)
         bot.edit_message_text(chat_id=message.chat.id, message_id=message.id,
                               text=">>>> админ-панель\n"
                                    "@asmemc - канал с новостями\n\n"
@@ -337,7 +411,7 @@ def handler(callback):
         cursor.execute(f'SELECT * FROM audio')
         Stickers = cursor.fetchall()
         n_of_s = len(Stickers)
-        AUTHORS = (f"....... code .......  v1.0 ß\n"
+        AUTHORS = (f"....... code .......  v1.0 \n"
                    "... @m6rshm3ll0w ...  @asmembot\n"
                    f"....................  ▼ stickers ▼\n"
                    f"....... audio ......  {n_of_s}\n"
@@ -403,6 +477,12 @@ def handler(callback):
         print(f"    > viewer page {PAGE}")
         all_s(callback.message)
 
+    elif callback.data == "banuser(beta)":
+        print("    > banuser")
+        mmss = bot.edit_message_text(chat_id=callback.message.chat.id, message_id=callback.message.message_id,
+                                     text="введи ID человека для добавления в банлист... ")
+        bot.register_next_step_handler(callback.message, B_U_ID, mmss)
+
     elif callback.data == "addsticker":
         print(f"    > adding a sticker(help)")
         markup = types.InlineKeyboardMarkup()
@@ -439,6 +519,38 @@ def D_S(message, mmss):
         time.sleep(2)
         bot.delete_message(abc.chat.id, abc.message_id)
         start(mmss)
+
+
+def B_U_ID(message, mmss):
+    print(f"      > del sticker {message.text}")
+    bot.delete_message(message.chat.id, message.message_id)
+    try:
+        IDs = int(message.text)
+        mmss = bot.edit_message_text(chat_id=mmss.chat.id, message_id=mmss.message_id,
+                                     text="Ты точно хочешь забанить человека, если да то напиши \n"
+                                          f" >>> я хочу забанить {IDs}\n"
+                                          "/back - вернуться в главное меню")
+        bot.register_next_step_handler(message, B_U_ID_2, IDs, mmss)
+    except ValueError:
+        abc = bot.send_message(message.chat.id, "Нет такого ID")
+        time.sleep(2)
+        bot.delete_message(abc.chat.id, abc.message_id)
+        start(mmss)
+
+
+def B_U_ID_2(message, IDs, mmss):
+    bot.delete_message(message.chat.id, message.message_id)
+    if message.text == f"я хочу забанить {IDs}":
+        print(f"        > deleting accepted!")
+        cursor.execute("INSERT INTO banlist (ID, DATE) VALUES (?, ?)",
+                       (IDs, str(datetime.now())))
+        conn.commit()
+        mmss = bot.edit_message_text(chat_id=mmss.chat.id, message_id=mmss.message_id, text=f"{IDs} забанен (")
+        time.sleep(2)
+        main_menu(mmss)
+    else:
+        print(f"        < ABORTED")
+        main_menu(mmss)
 
 
 def areyoushure(message, IDs, mmss):
@@ -661,15 +773,25 @@ def ED(message, IDs, mmss):
 # noinspection SpellCheckingInspection
 @bot.message_handler(content_types=["audio", "voice"])
 def add_sticker(message):
-    print(f">>> ADDING A STICKER by @{message.from_user.username}")
-    audio = message
-    markup = types.InlineKeyboardMarkup()
-    licensea = types.InlineKeyboardButton("УСЛОВИЯ", callback_data="license")
-    markup.add(licensea)
-    bot.send_message(message.chat.id, "Создавая стикер вы принимаете условия\n\n"
-                                      "Придумайте название для стикера....\n"
-                                      "напишите /back если не хотите создавать стикер", reply_markup=markup)
-    bot.register_next_step_handler(message, sticker_name, audio)
+    cursor.execute(f'SELECT ID FROM banlist')
+    BaNNED_USER = cursor.fetchall()
+    idu = (f'message.from_user.id',)
+    if idu in BaNNED_USER:
+        markup = types.InlineKeyboardMarkup()
+        licensea = types.InlineKeyboardButton("УСЛОВИЯ", callback_data="license")
+        markup.add(licensea)
+        bot.send_message(message.chat.id, "Вы нарушили правила бота, поэтому в оказались в банлисте :(",
+                         reply_markup=markup)
+    else:
+        print(f">>> ADDING A STICKER by @{message.from_user.username}")
+        audio = message
+        markup = types.InlineKeyboardMarkup()
+        licensea = types.InlineKeyboardButton("УСЛОВИЯ", callback_data="license")
+        markup.add(licensea)
+        bot.send_message(message.chat.id, "Создавая стикер вы принимаете условия\n\n"
+                                          "Придумайте название для стикера....\n"
+                                          "напишите /back если не хотите создавать стикер", reply_markup=markup)
+        bot.register_next_step_handler(message, sticker_name, audio)
 
 
 def sticker_name(message, audio):
@@ -749,7 +871,7 @@ def sticker_to_base(message, audio, NAME, TAGS):
         new_file.write(downloaded_file)
         new_file.close()
 
-    if len(DESCRIPTION) < 43:
+    if len(DESCRIPTION) > 43:
         fid = bot.send_audio(message.chat.id,
                              audio=open(SCR, 'rb'),
                              title=f"{NAME}",
@@ -812,7 +934,7 @@ def poooling_bot():
             print("\nHELLO, THIS IS TELECLI - debug CLI interface for @asmembot\n", end="")
             logging.info(" BOT RUNNING..... DONE")
             bot.polling(none_stop=True, interval=2)
-            sys.exit()
+            exit()
         except Exception as Except_:
 
             print("\033[3m\033[31m{}\033[0m".format(f"[{datetime.now()}] ERROR: {Except_}"))
@@ -823,6 +945,7 @@ def poooling_bot():
             time.sleep(10)
 
             print("DONE\n\n>>>")
+
 
 
 poooling_bot()
