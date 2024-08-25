@@ -1,3 +1,4 @@
+import types
 import uuid
 from telebot import *
 import sqlite3
@@ -8,7 +9,6 @@ import os
 import shutil
 from datetime import datetime
 import threading
-import sys
 from groq import Groq
 
 
@@ -109,15 +109,20 @@ def ADDD_PHOTO(photo):
 
 def ADDD_Chatgpt(text):
     print(f"    > render ask:{text}")
-
+    print(text)
     chat_completion = client.chat.completions.create(
         messages=[
+            {
+                "role": "system",
+                "content": "Ты вежливый помощник, который отвечает достаточно кратко и понятно на Русском языке"
+            },
             {
                 "role": "user",
                 "content": f"{text}",
             }
         ],
         model="llama3-8b-8192",
+        max_tokens=3000,
 
 
     )
@@ -125,21 +130,22 @@ def ADDD_Chatgpt(text):
     ask = chat_completion.choices[0].message.content
 
     if len(ask) > 43:
-        v = types.InlineQueryResultArticle(id="0", title="Chatgptask", description=f"{ask[:len(ask) - 43]}\n{ask[43:]}",
+        v = types.InlineQueryResultArticle(id="0", thumbnail_url=Chatgpt_ICON, title="Chatgpt", description=f"{ask[:len(ask) - 43]}\n{ask[43:]}",
                                            input_message_content=types.InputTextMessageContent(
                                                message_text=f"---- ChatGpt ----\n"
-                                                            f"{ask}"))
+                                                            f"{ask}", parse_mode="Markdown"))
     else:
-        v = types.InlineQueryResultArticle(id="0", title="Chatgptask", description=f"{ask}",
+        v = types.InlineQueryResultArticle(id="0", thumbnail_url=Chatgpt_ICON, title="Chatgpt", description=f"{ask}",
                                            input_message_content=types.InputTextMessageContent(
                                                message_text=f"---- ChatGpt ----\n"
-                                                            f"{ask}"))
+                                                            f"{ask}", parse_mode="Markdown"))
 
 
     return v
 
 
 Search_icon = "https://cdn3.iconfinder.com/data/icons/feather-5/24/search-512.png"
+Chatgpt_ICON = "https://freepnglogo.com/images/all_img/1700403373logo-chatgpt-png.png"
 PAGE = 1
 
 
@@ -152,15 +158,15 @@ def handle_inline_query(query):
     if query_text:
 
         if query_text.startswith("&"):
-            print(">>> user usig chatgpt:\n")
+            print(f">>> user usig chatgpt: {query_text}\n")
             query_text = query_text[1:]
-
             if query_text.endswith("#"):
-                query_text = query_text[:1]
+                query_text = query_text[:len(query_text)-1]
+                print(query_text)
                 header = types.InlineQueryResultArticle(
                     id='-1',
                     title="Запрос к ChatGpt:",
-                    description=f"Промпт: {query_text}, подожди пару секунд и ничего не делай",
+                    description=f"Промпт: {query_text}",
                     input_message_content=types.InputTextMessageContent(message_text=f"Запрос к ChatGpt: "
                                                                                      f"{query_text}"),
                     thumbnail_url=Search_icon,
@@ -174,7 +180,7 @@ def handle_inline_query(query):
                     description="В конце промпта напиши # для запроса",
                     input_message_content=types.InputTextMessageContent(message_text=f"Запрос к ChatGpt: "
                                                                                      f"{query_text}"),
-                    thumbnail_url=Search_icon,
+                    thumbnail_url=Chatgpt_ICON,
                 )
                 result.append(header)
 
