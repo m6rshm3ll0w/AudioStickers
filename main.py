@@ -2,36 +2,46 @@ import types
 import uuid
 from telebot import *
 import sqlite3
+
+import TEXT2IMG
 from TEXT2IMG import txt2img
 import time
-import logging
 import os
 import shutil
 from datetime import datetime
 import threading
 from groq import Groq
 
+print(f"STARTING BOT PROCESS: ")
+start_time = time.time()
+
+stop_thread = False
+
+print(f" > CLEARING ................. ", end="")
+
 
 def clear():
-    print("clearing --- OK")
     while True:
+        if stop_thread:
+            break
         if datetime.now().hour == 0 and datetime.now().minute == 00:
-            print(f"RESTARTING at {datetime.now()}")
+            print(f" > CLEAR DATA ............... ", end="")
+            start_time_c = time.time()
             bot.stop_polling()
             shutil.rmtree('/audio')
             shutil.rmtree('/img')
             os.mkdir('/audio')
             os.mkdir('/img')
-            print(f"DONE at {datetime.now()}")
             poooling_bot()
+            end_time_c = time.time()
+            print(f"DONE (elapsed: ~{round(float(end_time_c - start_time_c), 3)}sec)")
 
 
 thread = threading.Thread(target=clear)
 thread.start()
+print(f"DONE")
 
-print(f"\n\nSTARTING BOT PROCESS: ")
-start_time = time.time()
-print(f" > INITIALISE A BOT ..... ", end="")
+print(f" > INITIALISE BOT ........... ", end="")
 try:
     bot = telebot.TeleBot("7426229975:AAH46MNDug2wmHlOfhBlgUmL7SrjxhFX4gM")
     print("DONE")
@@ -40,8 +50,9 @@ except Exception as Except_:
           "\033[3m\033[31m{}\033[0m".format(f"[{datetime.now()}] ERROR: {Except_}"))
     exit()
 
-print(f" > INITIALISE A GroqAPI ..... ", end="")
+print(f" > INITIALISE GroqAPI ....... ", end="")
 try:
+    # noinspection SpellCheckingInspection
     GroqCloudAPISECRETKEY = "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"
     client = Groq(
         api_key=GroqCloudAPISECRETKEY,
@@ -52,7 +63,17 @@ except Exception as Except_:
           "\033[3m\033[31m{}\033[0m".format(f"[{datetime.now()}] ERROR: {Except_}"))
     exit()
 
-print(f" > CONNECTING TO DB ..... ", end="")
+print(f" > INIT. FUSION BRAIN API ... ", end="")
+try:
+    # noinspection SpellCheckingInspection
+    TEXT2IMG.INITIAL_API()
+    print("DONE")
+except Exception as Except_:
+    print("NO\n"
+          "\033[3m\033[31m{}\033[0m".format(f"[{datetime.now()}] ERROR: {Except_}"))
+    exit()
+
+print(f" > CONNECTING TO DB ......... ", end="")
 try:
     conn = sqlite3.connect("Dbase.db3", check_same_thread=False)
     print("DONE")
@@ -61,7 +82,7 @@ except Exception as Except_:
           "\033[3m\033[31m{}\033[0m".format(f"[{datetime.now()}] ERROR: {Except_}"))
     exit()
 
-print(f" > CREATING DB CURSOR ... ", end="")
+print(f" > CREATING DB CURSOR ....... ", end="")
 try:
     cursor = conn.cursor()
     print("DONE")
@@ -70,23 +91,11 @@ except Exception as Except_:
           "\033[3m\033[31m{}\033[0m".format(f"[{datetime.now()}] ERROR: {Except_}"))
     exit()
 
-print(f" > INITIALISE ADMINS .... ", end="")
+print(f" > INITIALISE ADMINS ........ ", end="")
 Audio_Chat = [6615328766, 5184525440]
 print("DONE")
 
-end_time = time.time()
-# noinspection SpellCheckingInspection
-print(f'STARTING BOT PROCESS .... DONE (elapsed: ~{round(float(end_time - start_time), 3)}sec)\n'
-      f'--------------------------------------------\n'
-      f' > BOT NAME      : @asmembot\n'
-      f' > BOT ADMINS    : {Audio_Chat}\n'
-      f'--------------------------------------------\n'
-      f' > NOW TIME      : {datetime.now()}\n'
-      f' > AUTHOR        : @m6rshm3ll0w\n'
-      f'--------------------------------------------\n'
-      f'!!! bot waiting INLINE REQUEST or COMMAND /start !!!')
-time.sleep(2)
-print("\n\nStarting TELECLI beta for @asmembot \n", end="")
+print(f" > INITIALISE ALL BOT FUNC .. ", end="")
 
 
 def ADDD_Audio(voice):
@@ -124,13 +133,13 @@ def ADDD_Chatgpt(text):
         model="llama3-8b-8192",
         max_tokens=3000,
 
-
     )
 
     ask = chat_completion.choices[0].message.content
 
     if len(ask) > 43:
-        v = types.InlineQueryResultArticle(id="0", thumbnail_url=Chatgpt_ICON, title="Chatgpt", description=f"{ask[:len(ask) - 43]}\n{ask[43:]}",
+        v = types.InlineQueryResultArticle(id="0", thumbnail_url=Chatgpt_ICON, title="Chatgpt",
+                                           description=f"{ask[:len(ask) - 43]}\n{ask[43:]}",
                                            input_message_content=types.InputTextMessageContent(
                                                message_text=f"---- ChatGpt ----\n"
                                                             f"{ask}", parse_mode="Markdown"))
@@ -140,13 +149,13 @@ def ADDD_Chatgpt(text):
                                                message_text=f"---- ChatGpt ----\n"
                                                             f"{ask}", parse_mode="Markdown"))
 
-
     return v
 
 
 Search_icon = "https://cdn3.iconfinder.com/data/icons/feather-5/24/search-512.png"
 Chatgpt_ICON = "https://freepnglogo.com/images/all_img/1700403373logo-chatgpt-png.png"
 PAGE = 1
+B_PAGE = 1
 
 
 @bot.inline_handler(func=lambda query: True)
@@ -161,7 +170,7 @@ def handle_inline_query(query):
             print(f">>> user usig chatgpt: {query_text}\n")
             query_text = query_text[1:]
             if query_text.endswith("#"):
-                query_text = query_text[:len(query_text)-1]
+                query_text = query_text[:len(query_text) - 1]
                 print(query_text)
                 header = types.InlineQueryResultArticle(
                     id='-1',
@@ -302,8 +311,25 @@ def start(message):
 
 def main_menu(message):
     print("    > loading a main_menu")
+    main_text = str("@asmemc - канал с новостями\n"
+                    "\n"
+                    "**V1.1**\n"
+                    "\n"
+                    "👋 Привет, это бот для того, чтобы "
+                    "все смешные голосовые"
+                    "сообщения и аудио-мемы "
+                    "были в сборе и ты мог их быстро отправлять своим друзьям "
+                    "или в комментариях в каналах \n"
+                    "\n"
+                    "\n"
+                    "**ChangeLog**\n"
+                    "1.0 β - генерация картинок и возрастной рейтинг\n"
+                    "1.1 - ChatGpt и просмотр-отправка ранее генерированных картинок в Inline-режиме\n"
+                    "\n"
+                    "подробнее о боте во вкладке **'Как пользоваться?'**\n"
+                    "Ниже есть кнопки, выбери что хочешь сделать 👇")
     markup = types.InlineKeyboardMarkup()
-    about = types.InlineKeyboardButton("О создателях / Инфо", callback_data="about")
+    about = types.InlineKeyboardButton("О создателях", callback_data="about")
     mems = types.InlineKeyboardButton("Все войс-стикеры", callback_data="allmems")
     addsticker = types.InlineKeyboardButton("Добавить стикер", callback_data="addsticker")
     howto = types.InlineKeyboardButton("Как пользоваться?", callback_data="howto")
@@ -313,46 +339,28 @@ def main_menu(message):
     markup.add(about, link_to_app)
     markup.add(mems, addsticker)
     markup.add(howto, channel)
-    if message.chat.id in Audio_Chat:
+    cursor.execute(f'SELECT ID FROM banlist')
+    BaNNED_USER = cursor.fetchall()
+    idu = (f'message.from_user.id',)
+    if message.chat.id in Audio_Chat and idu not in BaNNED_USER:
         adm = types.InlineKeyboardButton("👇👇Возможности админов👇👇", callback_data="0")
         edit_msg = types.InlineKeyboardButton("редактировать стикер", callback_data="edit_s")
         del_msg = types.InlineKeyboardButton("удалить стикер", callback_data="del_s")
         ban = types.InlineKeyboardButton("Выдать бан", callback_data="banuser")
+        unban = types.InlineKeyboardButton("Убрать бан", callback_data="unbanuser")
+        banl = types.InlineKeyboardButton("Банлист", callback_data="banlist")
         markup.add(adm)
         markup.add(edit_msg, del_msg)
-        markup.add(ban)
+        markup.add(ban, unban)
+        markup.add(banl)
         bot.edit_message_text(chat_id=message.chat.id, message_id=message.id,
-                              text=">>>> админ-панель\n"
-                                   "@asmemc - канал с новостями\n\n"
-                                   "👋 Привет, это бот для того, чтобы "
-                                   "все смешные голосовые"
-                                   "сообщения и аудио-мемы "
-                                   "были в сборе и ты мог их быстро отправлять своим друзьям "
-                                   "или в комментариях в каналах \n\n"
-                                   "!!! Если в описании видите пометку R18 - "
-                                   "это обозначает, что у данного аудио стикера рейтинг 18+, будьте внимательны !!!\n"
-                                   "Все стикеры модерируются!!!\n\n"
-                                   "1.0 - генерация картинок\n"
-                                   " > Напиши '/generate (твой промпт)' и подожди ~20сек\n\n"
-                                   "Ниже есть кнопки, выбери что хочешь сделать 👇",
-                              reply_markup=markup)
+                              text=f">>>> админ-панель\n{main_text}",
+                              reply_markup=markup, parse_mode="Markdown")
 
     elif message.chat.id != Audio_Chat:
         bot.edit_message_text(chat_id=message.chat.id, message_id=message.id,
-                              text=">>>> админ-панель\n"
-                                   "@asmemc - канал с новостями\n\n"
-                                   "👋 Привет, это бот для того, чтобы "
-                                   "все смешные голосовые"
-                                   "сообщения и аудио-мемы "
-                                   "были в сборе и ты мог их быстро отправлять своим друзьям "
-                                   "или в комментариях в каналах \n\n"
-                                   "!!! Если в описании видите пометку R18 - "
-                                   "это обозначает, что у данного аудио стикера рейтинг 18+, будьте внимательны !!!\n"
-                                   "Все стикеры модерируются!!!\n\n"
-                                   "1.0 - генерация картинок\n"
-                                   " > Напиши '/generate (твой промпт)' и подожди ~20сек\n\n"
-                                   "Ниже есть кнопки, выбери что хочешь сделать 👇",
-                              reply_markup=markup)
+                              text=main_text,
+                              reply_markup=markup, parse_mode="Markdown")
 
 
 def all_s(message):
@@ -411,13 +419,13 @@ def all_s(message):
 @bot.callback_query_handler(func=lambda callback: True)
 def handler(callback):
     print(">>> callback")
-    global PAGE
+    global PAGE, B_PAGE
     if callback.data == "about":
         print("    > page about")
         cursor.execute(f'SELECT * FROM audio')
         Stickers = cursor.fetchall()
         n_of_s = len(Stickers)
-        AUTHORS = (f"....... code .......  v1.0 \n"
+        AUTHORS = (f"....... code .......  v1.1 \n"
                    "... @m6rshm3ll0w ...  @asmembot\n"
                    f"....................  ▼ stickers ▼\n"
                    f"....... audio ......  {n_of_s}\n"
@@ -439,22 +447,38 @@ def handler(callback):
         bot.edit_message_text("Использование нашего бота проще чем тебе кажется, "
                               "просто в чате с другом или комментарии напиши @asmembot и выбери войс-стикер, "
                               "если ни один не понравился, можешь добавить свой через этого бота...\n"
-                              "Для упрощения использования, тут есть поиск: \n"
+                              "Для упрощения использования, тут есть поиск \n"
+                              "\n"
+                              "**Inline режим** \n"
                               "-> по авторам - @\n"
                               "-> по названию\n"
                               "-> по страницам\n"
                               "-> по тегам - #\n"
                               "-> ранее сгенерированные картинки - $\n"
-                              "!!! Если в описании видите пометку R18 - "
-                              "это обозначает, что у данного аудиостикера рейтинг 18+, будьте внимательны !!!\n"
-                              "Все стикеры модерируются!!!\n\n"
+                              "-> вызов Chat GPT - '&(запрос)#'\n"
                               "\n"
+                              "__БОТ__\n"
+                              "-> Напиши ```bash /generate (твой промпт)``` и подожди ~20сек\n"
+                              "\n"
+                              "**ВАЖНОЕ**\n"
+                              "Если в описании видите пометку R18 - "
+                              "это обозначает, что у данного аудиостикера рейтинг 18+, будьте внимательны !!!\n"
+                              "Все стикеры модерируются\n"
+                              "\n"
+                              "**ПРАВИЛА**\n"
+                              "УСЛОВИЯ добавления стикера:\n"
+                              "1.Убедитесь, что такого стикера нет\n"
+                              "2.Добавте '(R18)', если рейтинг аудио 18+\n"
+                              "3.За 2 нарушения правил вы получаете предупреждение, "
+                              "а за 3 - вы не можете добавлять стикеры\n"
+                              "\n"
+                              "эта страница будет дополняться"
                               "вот и все, так просто\n"
                               "\n"
                               "П.С содержание страниц и номера стикеров можешь посмотреть через пункт \n"
-                              "'все войс-стикеры' 🤗",
-                              callback.message.chat.id,
-                              callback.message.id, reply_markup=markup)
+                              "'все войс-стикеры' 🤗", parse_mode="Markdown", chat_id=callback.message.chat.id,
+                              message_id=callback.message.id, reply_markup=markup)
+
 
     elif callback.data == "allmems":
         print("    > viewer page")
@@ -483,11 +507,22 @@ def handler(callback):
         print(f"    > viewer page {PAGE}")
         all_s(callback.message)
 
-    elif callback.data == "banuser(beta)":
+    elif callback.data == "banuser":
         print("    > banuser")
         mmss = bot.edit_message_text(chat_id=callback.message.chat.id, message_id=callback.message.message_id,
-                                     text="введи ID человека для добавления в банлист... ")
+                                     text="введи ID человека для добавления в банлист или /back ... ")
         bot.register_next_step_handler(callback.message, B_U_ID, mmss)
+
+    elif callback.data == "unbanuser":
+        print("    > unbanuser")
+        mmss = bot.edit_message_text(chat_id=callback.message.chat.id, message_id=callback.message.message_id,
+                                     text="введи ID человека для удаления из банлиста или /back ... ")
+        bot.register_next_step_handler(callback.message, UB_U_ID, mmss)
+
+    elif callback.data == "banlist":
+        print("    > banlist")
+        B_PAGE = 1
+        Ban_LIST(callback.message)
 
     elif callback.data == "addsticker":
         print(f"    > adding a sticker(help)")
@@ -500,6 +535,7 @@ def handler(callback):
                               " иначе админы тебя забанят )))",
                               callback.message.chat.id,
                               callback.message.id, reply_markup=markup)
+
     elif callback.data == "license":
         LICENSE = ("УСЛОВИЯ добавления стикера:\n"
                    "1.Убедитесь, что такого стикера нет\n"
@@ -508,6 +544,25 @@ def handler(callback):
                    "а за 3 - вы не можете добавлять стикеры")
         bot.answer_callback_query(callback_query_id=callback.id, text=LICENSE,
                                   show_alert=True)
+
+
+def Ban_LIST(message):
+    print("    >> loading a viewer")
+    markup = types.InlineKeyboardMarkup()
+    back = types.InlineKeyboardButton("В главное меню 😉", callback_data="main_menu")
+    markup.add(back)
+    cursor.execute('SELECT * FROM banlist')
+    banlist = cursor.fetchall()
+    result = "Все забаненные юзеры:\n"
+
+    if len(banlist) == 0:
+        result = result + "пока тут пусто\n"
+
+    for banneduser in banlist:
+        f = (f"ID {banneduser[0]}\n"
+             f"> date. : {banneduser[3]}\n\n")
+        result = result + f
+    bot.edit_message_text(text=result, chat_id=message.chat.id, message_id=message.id, reply_markup=markup)
 
 
 def D_S(message, mmss):
@@ -527,24 +582,47 @@ def D_S(message, mmss):
         start(mmss)
 
 
-def B_U_ID(message, mmss):
-    print(f"      > del sticker {message.text}")
+def areyoushure(message, IDs, mmss):
     bot.delete_message(message.chat.id, message.message_id)
-    try:
-        IDs = int(message.text)
-        mmss = bot.edit_message_text(chat_id=mmss.chat.id, message_id=mmss.message_id,
-                                     text="Ты точно хочешь забанить человека, если да то напиши \n"
-                                          f" >>> я хочу забанить {IDs}\n"
-                                          "/back - вернуться в главное меню")
-        bot.register_next_step_handler(message, B_U_ID_2, IDs, mmss)
-    except ValueError:
-        abc = bot.send_message(message.chat.id, "Нет такого ID")
+    if message.text == f"я хочу удалить стикер {IDs}":
+        print(f"        > deleting accepted!")
+        print(f"        > deleted sticker!")
+        cursor.execute(f'DELETE from audio WHERE ID = ?',
+                       f"{IDs}")
+        conn.commit()
+        mmss = bot.edit_message_text(chat_id=mmss.chat.id, message_id=mmss.message_id, text="Стикер удален (")
         time.sleep(2)
-        bot.delete_message(abc.chat.id, abc.message_id)
-        start(mmss)
+        main_menu(mmss)
+    else:
+        print(f"        < ABORTED")
+        main_menu(mmss)
+
+
+def B_U_ID(message, mmss):
+    bot.delete_message(message.chat.id, message.message_id)
+    if message.text == '/back':
+        print(f"          < ABORTED")
+        main_menu(mmss)
+    else:
+
+        print(f"      > del sticker {message.text}")
+        bot.delete_message(message.chat.id, message.message_id)
+        try:
+            IDs = int(message.text)
+            mmss = bot.edit_message_text(chat_id=mmss.chat.id, message_id=mmss.message_id,
+                                         text="Ты точно хочешь забанить человека, если да то напиши \n"
+                                              f" >>> я хочу забанить {IDs}\n"
+                                              "/back - вернуться в главное меню")
+            bot.register_next_step_handler(message, B_U_ID_2, IDs, mmss)
+        except ValueError:
+            abc = bot.send_message(message.chat.id, "Нет такого ID")
+            time.sleep(2)
+            bot.delete_message(abc.chat.id, abc.message_id)
+            start(mmss)
 
 
 def B_U_ID_2(message, IDs, mmss):
+    bot.delete_message(message.chat.id, message.message_id)
     bot.delete_message(message.chat.id, message.message_id)
     if message.text == f"я хочу забанить {IDs}":
         print(f"        > deleting accepted!")
@@ -559,19 +637,19 @@ def B_U_ID_2(message, IDs, mmss):
         main_menu(mmss)
 
 
-def areyoushure(message, IDs, mmss):
+def UB_U_ID(message, mmss):
     bot.delete_message(message.chat.id, message.message_id)
-    if message.text == f"я хочу удалить стикер {IDs}":
-        print(f"        > deleting accepted!")
-        print(f"        > deleted sticker!")
-        cursor.execute(f'DELETE from audio WHERE ID = ?',
-                       f"{IDs}")
-        conn.commit()
-        mmss = bot.edit_message_text(chat_id=mmss.chat.id, message_id=mmss.message_id, text="Стикер удален (")
-        time.sleep(2)
+    if message.text == '/back':
+        print(f"          < ABORTED")
         main_menu(mmss)
     else:
-        print(f"        < ABORTED")
+        IDs = message.text
+        cursor.execute(f'DELETE from banlist WHERE ID = ?',
+                       f"{IDs}")
+        conn.commit()
+        mmss = bot.edit_message_text(chat_id=mmss.chat.id, message_id=mmss.message_id, text=f"{IDs} разбанен")
+        bot.send_message(IDs, "Вы разбанены!!!")
+        time.sleep(2)
         main_menu(mmss)
 
 
@@ -906,41 +984,55 @@ def sticker_to_base(message, audio, NAME, TAGS):
 @bot.message_handler(commands=["generate"])
 def start_generate_txt2_img(message):
     print(">>> GENERATE func.")
-    text = message.text[len('/generate '):].strip()
-    args = str(text).split(" ")
+    PROMPT = message.text[len('/generate '):].strip()
+    args = str(PROMPT).split(" ")
     if len(args) >= 1:
-        if text == "":
+        if PROMPT == "":
             print("    > INCORRECT ARGs")
             fff = bot.send_message(message.chat.id, "Неправильный вызов команды\n"
                                                     "> запуск со стандартным промптом")
-            text = "очень пушистый милый кот в шляпе, 3D мир, Blender, Рендеринг"
         else:
-            print(f"    > Generation by prompt {text}, BY {message.from_user.username}")
+            print(f"    > Generation by prompt: {PROMPT}, BY {message.from_user.username}")
             fff = bot.send_message(message.chat.id, "Генерация запущена, подожди чуть-чуть!")
 
         s_time = time.time()
-        Scr = txt2img(text, message.from_user.username)
+        Scr = txt2img(PROMPT, message.from_user.username)
         e_time = time.time()
         bot.delete_message(message.chat.id, fff.message_id)
         print(f"      > Generation SUCCESSFULLY : elapsed {round(float(e_time - s_time), 2)}sec")
-        gen_photo = bot.send_photo(message.chat.id, open(Scr, 'rb'), f"generated by command: \n>> /generate {text}\n\n"
-                                                                     f"elapsed: ~{round(float(e_time - s_time), 2)}sec")
-        cursor.execute('INSERT INTO genlist (PROMPT, BY, FILE_ID) VALUES (?, ?, ?)',
-                       (text, f"@{message.from_user.username}", gen_photo.photo[-1].file_id))
-        conn.commit()
+
+        if PROMPT == "":
+            bot.send_photo(message.chat.id, open(Scr, 'rb'),
+                           f"generated by command: \n"
+                           f">> /generate очень пушистый милый кот в шляпе, 3D мир, Blender, Рендеринг\n\n"
+                           f"elapsed: ~{round(float(e_time - s_time), 2)}sec")
+            pass
+        else:
+            gen_photo = bot.send_photo(message.chat.id, open(Scr, 'rb'),
+                                       f"generated by command: \n>> /generate {PROMPT}\n\n"
+                                       f"elapsed: ~{round(float(e_time - s_time), 2)}sec")
+            cursor.execute('INSERT INTO genlist (PROMPT, BY, FILE_ID) VALUES (?, ?, ?)',
+                           (PROMPT, f"@{message.from_user.username}",
+                            gen_photo.photo[-1].file_id))
+            conn.commit()
     else:
         print("    > INCORRECT ARGs")
         bot.send_message(message.chat.id, "Неправильный вызов команды, попробуй ещё!")
 
 
-# noinspection SpellCheckingInspection
+# noinspection SpellCheckingInspection, PyShadowingNames
 def poooling_bot():
+    global stop_thread
     while True:
         try:
-            print("\nHELLO, THIS IS TELECLI - debug CLI interface for @asmembot\n", end="")
-            logging.info(" BOT RUNNING..... DONE")
-            bot.polling(none_stop=True, interval=2)
-            exit()
+            end_time = time.time()
+            print(f'DONE (elapsed: ~{round(float(end_time - start_time), 3)}sec)\n\n')
+            bot.polling(none_stop=True, interval=0)
+            print("STOPPING BOT ........ ", end="")
+            stop_thread = True
+            thread.join()
+            print("DONE")
+            break
         except Exception as Except_:
 
             print("\033[3m\033[31m{}\033[0m".format(f"[{datetime.now()}] ERROR: {Except_}"))
@@ -953,5 +1045,21 @@ def poooling_bot():
             print("DONE\n\n>>>")
 
 
+
+print("DONE")
+
+botname = str(bot.get_my_name()).split(": ")[1]
+botname = botname[:len(botname)-2]
+botname = botname[1:]
+print(
+      f'--------------------------------------------\n'
+      f' > BOT NAME      : {botname}\n'
+      f' > BOT ADMINS    : {Audio_Chat}\n'
+      f'--------------------------------------------\n'
+      f' > NOW TIME      : {datetime.now()}\n'
+      f' > AUTHOR        : @m6rshm3ll0w\n'
+      f'--------------------------------------------')
+
+print("STARTING BOT PROCESS ........ ", end="")
 
 poooling_bot()
