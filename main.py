@@ -166,34 +166,34 @@ def handle_inline_query(query):
 
     if query_text:
 
-        if query_text.startswith("&"):
-            print(f">>> user usig chatgpt: {query_text}\n")
-            query_text = query_text[1:]
-            if query_text.endswith("#"):
-                query_text = query_text[:len(query_text) - 1]
-                print(query_text)
-                header = types.InlineQueryResultArticle(
-                    id='-1',
-                    title="Запрос к ChatGpt:",
-                    description=f"Промпт: {query_text}",
-                    input_message_content=types.InputTextMessageContent(message_text=f"Запрос к ChatGpt: "
-                                                                                     f"{query_text}"),
-                    thumbnail_url=Search_icon,
-                )
-                result.append(header)
-                result.append(ADDD_Chatgpt(query_text))
-            else:
-                header = types.InlineQueryResultArticle(
-                    id='-1',
-                    title="ChatGPT",
-                    description="В конце промпта напиши # для запроса",
-                    input_message_content=types.InputTextMessageContent(message_text=f"Запрос к ChatGpt: "
-                                                                                     f"{query_text}"),
-                    thumbnail_url=Chatgpt_ICON,
-                )
-                result.append(header)
+        # if query_text.startswith("&"):
+        #     print(f">>> user usig chatgpt: {query_text}\n")
+        #     query_text = query_text[1:]
+        #     if query_text.endswith("#"):
+        #         query_text = query_text[:len(query_text) - 1]
+        #         print(query_text)
+        #         header = types.InlineQueryResultArticle(
+        #             id='-1',
+        #             title="Запрос к ChatGpt:",
+        #             description=f"Промпт: {query_text}",
+        #             input_message_content=types.InputTextMessageContent(message_text=f"Запрос к ChatGpt: "
+        #                                                                              f"{query_text}"),
+        #             thumbnail_url=Search_icon,
+        #         )
+        #         result.append(header)
+        #         result.append(ADDD_Chatgpt(query_text))
+        #     else:
+        #         header = types.InlineQueryResultArticle(
+        #             id='-1',
+        #             title="ChatGPT",
+        #             description="В конце промпта напиши # для запроса",
+        #             input_message_content=types.InputTextMessageContent(message_text=f"Запрос к ChatGpt: "
+        #                                                                              f"{query_text}"),
+        #             thumbnail_url=Chatgpt_ICON,
+        #         )
+        #         result.append(header)
 
-        elif query_text.startswith("$"):
+        if query_text.startswith("$"):
             print(">>> user searching genlist:\n")
             query_text = query_text[1:]
             if query_text != "":
@@ -324,7 +324,7 @@ def main_menu(message):
                     "\n"
                     "**ChangeLog**\n"
                     "1.0 β - генерация картинок и возрастной рейтинг\n"
-                    "1.1 - ChatGpt и просмотр-отправка ранее генерированных картинок в Inline-режиме\n"
+                    # "1.1 - ChatGpt и просмотр-отправка ранее генерированных картинок в Inline-режиме\n"
                     "\n"
                     "подробнее о боте во вкладке **'Как пользоваться?'**\n"
                     "Ниже есть кнопки, выбери что хочешь сделать 👇")
@@ -455,7 +455,7 @@ def handler(callback):
                               "-> по страницам\n"
                               "-> по тегам - #\n"
                               "-> ранее сгенерированные картинки - $\n"
-                              "-> вызов Chat GPT - '&(запрос)#'\n"
+                              # "-> вызов Chat GPT - '&(запрос)#'\n"
                               "\n"
                               "__БОТ__\n"
                               "-> Напиши ```bash /generate (твой промпт)``` и подожди ~20сек\n"
