@@ -311,7 +311,8 @@ def start(message):
 
 def main_menu(message):
     print("    > loading a main_menu")
-    main_text = str("@asmemc - канал с новостями\n"
+    main_text = str("@asmemc - канал с новостями "
+                    "(подпишитесь пж)\n"
                     "\n"
                     "**V1.1**\n"
                     "\n"
@@ -330,6 +331,8 @@ def main_menu(message):
                     "Ниже есть кнопки, выбери что хочешь сделать 👇")
     markup = types.InlineKeyboardMarkup()
     about = types.InlineKeyboardButton("О создателях", callback_data="about")
+    botform = types.InlineKeyboardButton("Сообщить о баге / предложить идею",
+                                         url="https://m6rshm3ll0w.netlify.app/botform/")
     mems = types.InlineKeyboardButton("Все войс-стикеры", callback_data="allmems")
     addsticker = types.InlineKeyboardButton("Добавить стикер", callback_data="addsticker")
     howto = types.InlineKeyboardButton("Как пользоваться?", callback_data="howto")
@@ -339,6 +342,7 @@ def main_menu(message):
     markup.add(about, link_to_app)
     markup.add(mems, addsticker)
     markup.add(howto, channel)
+    markup.add(botform)
     cursor.execute(f'SELECT ID FROM banlist')
     BaNNED_USER = cursor.fetchall()
     idu = (f'message.from_user.id',)
