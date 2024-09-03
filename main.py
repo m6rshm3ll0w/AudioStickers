@@ -37,8 +37,8 @@ def clear():
             print(f"DONE (elapsed: ~{round(float(end_time_c - start_time_c), 3)}sec)")
 
 
-thread = threading.Thread(target=clear)
-thread.start()
+# thread = threading.Thread(target=clear)
+# thread.start()
 print(f"DONE")
 
 print(f" > INITIALISE BOT ........... ", end="")
@@ -92,7 +92,7 @@ except Exception as Except_:
     exit()
 
 print(f" > INITIALISE ADMINS ........ ", end="")
-Audio_Chat = [6615328766, 5184525440]
+Audio_Chat = 6615328766
 print("DONE")
 
 print(f" > INITIALISE ALL BOT FUNC .. ", end="")
@@ -156,6 +156,7 @@ Search_icon = "https://cdn3.iconfinder.com/data/icons/feather-5/24/search-512.pn
 Chatgpt_ICON = "https://freepnglogo.com/images/all_img/1700403373logo-chatgpt-png.png"
 PAGE = 1
 B_PAGE = 1
+A_PAGE = 1
 
 
 @bot.inline_handler(func=lambda query: True)
@@ -332,7 +333,7 @@ def main_menu(message):
     markup = types.InlineKeyboardMarkup()
     about = types.InlineKeyboardButton("О создателях", callback_data="about")
     botform = types.InlineKeyboardButton("Сообщить о баге / предложить идею",
-                                         url="https://m6rshm3ll0w.netlify.app/botform/")
+                                         url="https://m1k0.netlify.app/botform/")
     mems = types.InlineKeyboardButton("Все войс-стикеры", callback_data="allmems")
     addsticker = types.InlineKeyboardButton("Добавить стикер", callback_data="addsticker")
     howto = types.InlineKeyboardButton("Как пользоваться?", callback_data="howto")
@@ -343,25 +344,37 @@ def main_menu(message):
     markup.add(mems, addsticker)
     markup.add(howto, channel)
     markup.add(botform)
+
+    user = message.chat.id
+    idu = (user,)
+
     cursor.execute(f'SELECT ID FROM banlist')
     BaNNED_USER = cursor.fetchall()
-    idu = (f'message.from_user.id',)
-    if message.chat.id in Audio_Chat and idu not in BaNNED_USER:
+
+    cursor.execute(f'SELECT ID FROM admins')
+    ADM_USER = cursor.fetchall()
+    if idu in ADM_USER and idu not in BaNNED_USER:
         adm = types.InlineKeyboardButton("👇👇Возможности админов👇👇", callback_data="0")
         edit_msg = types.InlineKeyboardButton("редактировать стикер", callback_data="edit_s")
         del_msg = types.InlineKeyboardButton("удалить стикер", callback_data="del_s")
         ban = types.InlineKeyboardButton("Выдать бан", callback_data="banuser")
-        unban = types.InlineKeyboardButton("Убрать бан", callback_data="unbanuser")
+        unban = types.InlineKeyboardButton("Убрать бан", callback_data="deladm")
         banl = types.InlineKeyboardButton("Банлист", callback_data="banlist")
+        adml = types.InlineKeyboardButton("Админы", callback_data="admlist")
         markup.add(adm)
         markup.add(edit_msg, del_msg)
         markup.add(ban, unban)
-        markup.add(banl)
+        if message.chat.id == Audio_Chat:
+            deladm = types.InlineKeyboardButton("Убрать админку", callback_data="deladm")
+            addadm = types.InlineKeyboardButton("Выдать админку", callback_data="addadm")
+            markup.add(deladm, addadm)
+
+        markup.add(banl, adml)
         bot.edit_message_text(chat_id=message.chat.id, message_id=message.id,
                               text=f">>>> админ-панель\n{main_text}",
                               reply_markup=markup, parse_mode="Markdown")
 
-    elif message.chat.id != Audio_Chat:
+    else:
         bot.edit_message_text(chat_id=message.chat.id, message_id=message.id,
                               text=main_text,
                               reply_markup=markup, parse_mode="Markdown")
@@ -423,18 +436,18 @@ def all_s(message):
 @bot.callback_query_handler(func=lambda callback: True)
 def handler(callback):
     print(">>> callback")
-    global PAGE, B_PAGE
+    global PAGE, B_PAGE, A_PAGE
     if callback.data == "about":
         print("    > page about")
         cursor.execute(f'SELECT * FROM audio')
         Stickers = cursor.fetchall()
         n_of_s = len(Stickers)
-        AUTHORS = (f"....... code .......  v1.1 \n"
-                   "... @m6rshm3ll0w ...  @asmembot\n"
-                   f"....................  ▼ stickers ▼\n"
-                   f"....... audio ......  {n_of_s}\n"
-                   "...... @VaLm1n .....\n"
-                   ".... @YltraPablo ...")
+        AUTHORS = (f"code v1.1\n"
+                   f"> @m6rshm3ll0w\n"
+                   f"_____________________\n"
+                   f"audio\n"
+                   f"> @VaLm1n\n"
+                   f"> @YltraPablo & @Produktolog24")
 
         bot.answer_callback_query(callback_query_id=callback.id, text=AUTHORS,
                                   show_alert=True)
@@ -523,6 +536,23 @@ def handler(callback):
                                      text="введи ID человека для удаления из банлиста или /back ... ")
         bot.register_next_step_handler(callback.message, UB_U_ID, mmss)
 
+    elif callback.data == "admlist":
+        print("    > admlist")
+        A_PAGE = 1
+        ADM_LIST(callback.message)
+
+    elif callback.data == "addadm":
+        print("    > add adm")
+        mmss = bot.edit_message_text(chat_id=callback.message.chat.id, message_id=callback.message.message_id,
+                                     text="введи ID человека для добавления в админы или /back ... ")
+        bot.register_next_step_handler(callback.message, ADM_ID, mmss)
+
+    elif callback.data == "deladm":
+        print("    > del adm")
+        mmss = bot.edit_message_text(chat_id=callback.message.chat.id, message_id=callback.message.message_id,
+                                     text="введи ID человека для удаления из админов или /back ... ")
+        bot.register_next_step_handler(callback.message, DEL_ADM_U_ID, mmss)
+
     elif callback.data == "banlist":
         print("    > banlist")
         B_PAGE = 1
@@ -564,7 +594,26 @@ def Ban_LIST(message):
 
     for banneduser in banlist:
         f = (f"ID {banneduser[0]}\n"
-             f"> date. : {banneduser[3]}\n\n")
+             f"> date. : {banneduser[1]}\n\n")
+        result = result + f
+    bot.edit_message_text(text=result, chat_id=message.chat.id, message_id=message.id, reply_markup=markup)
+
+
+def ADM_LIST(message):
+    print("    >> loading a viewer")
+    markup = types.InlineKeyboardMarkup()
+    back = types.InlineKeyboardButton("В главное меню 😉", callback_data="main_menu")
+    markup.add(back)
+    cursor.execute('SELECT * FROM admins')
+    admins = cursor.fetchall()
+    result = "Все админы:\n"
+
+    if len(admins) == 0:
+        result = result + "пока тут пусто\n"
+
+    for admuser in admins:
+        f = (f"ID {admuser[0]}\n"
+             f"> date. : {admuser[1]}\n\n")
         result = result + f
     bot.edit_message_text(text=result, chat_id=message.chat.id, message_id=message.id, reply_markup=markup)
 
@@ -591,14 +640,68 @@ def areyoushure(message, IDs, mmss):
     if message.text == f"я хочу удалить стикер {IDs}":
         print(f"        > deleting accepted!")
         print(f"        > deleted sticker!")
-        cursor.execute(f'DELETE from audio WHERE ID = ?',
-                       f"{IDs}")
+        cursor.execute('DELETE FROM audio WHERE ID = ?', (IDs,))
         conn.commit()
         mmss = bot.edit_message_text(chat_id=mmss.chat.id, message_id=mmss.message_id, text="Стикер удален (")
         time.sleep(2)
         main_menu(mmss)
     else:
         print(f"        < ABORTED")
+        main_menu(mmss)
+
+
+def ADM_ID(message, mmss):
+    bot.delete_message(message.chat.id, message.message_id)
+    if message.text == '/back':
+        print(f"          < ABORTED")
+        main_menu(mmss)
+    else:
+
+        print(f"      > add admin {message.text}")
+        bot.delete_message(message.chat.id, message.message_id)
+        try:
+            IDs = int(message.text)
+            mmss = bot.edit_message_text(chat_id=mmss.chat.id, message_id=mmss.message_id,
+                                         text="Ты точно хочешь добавить админа, если да то напиши \n"
+                                              f" >>> я хочу сделать админом {IDs}\n"
+                                              "/back - вернуться в главное меню")
+            bot.register_next_step_handler(message, ADM_ID_2, IDs, mmss)
+        except ValueError:
+            abc = bot.send_message(message.chat.id, "Нет такого ID")
+            time.sleep(2)
+            bot.delete_message(abc.chat.id, abc.message_id)
+            start(mmss)
+
+
+def ADM_ID_2(message, IDs, mmss):
+    bot.delete_message(message.chat.id, message.message_id)
+    if message.text == f"я хочу сделать админом {IDs}":
+        print(f"        > adding acepted")
+        cursor.execute("INSERT INTO admins (ID, DATE) VALUES (?, ?)",
+                       (IDs, str(datetime.now())))
+        conn.commit()
+        mmss = bot.edit_message_text(chat_id=mmss.chat.id, message_id=mmss.message_id, text=f"{IDs} админ >")
+        bot.send_message(IDs, "Вы админ!!!")
+        time.sleep(2)
+        main_menu(mmss)
+    else:
+        print(f"        < ABORTED")
+        main_menu(mmss)
+
+
+def DEL_ADM_U_ID(message, mmss):
+    bot.delete_message(message.chat.id, message.message_id)
+    if message.text == '/back':
+        print(f"          < ABORTED")
+        main_menu(mmss)
+    else:
+        IDs = message.text
+        cursor.execute(f'DELETE from admins WHERE ID = ?',
+                       f"{IDs}")
+        conn.commit()
+        mmss = bot.edit_message_text(chat_id=mmss.chat.id, message_id=mmss.message_id, text=f"{IDs} Удален из админов")
+        bot.send_message(IDs, "Вы не админ!!!")
+        time.sleep(2)
         main_menu(mmss)
 
 
@@ -626,7 +729,6 @@ def B_U_ID(message, mmss):
 
 
 def B_U_ID_2(message, IDs, mmss):
-    bot.delete_message(message.chat.id, message.message_id)
     bot.delete_message(message.chat.id, message.message_id)
     if message.text == f"я хочу забанить {IDs}":
         print(f"        > deleting accepted!")
@@ -837,7 +939,7 @@ def ED(message, IDs, mmss):
             new_file.close()
 
         DESCRIPTION = f"{BY} ● {message.text}"
-        if len(DESCRIPTION) < 43:
+        if len(DESCRIPTION) > 43:
             fid = bot.send_audio(message.chat.id,
                                  audio=open(f"{SCR}/{FID}.ogg", 'rb'),
                                  title=f"{FILE_id[0][1]}",
@@ -909,28 +1011,47 @@ def sticker_emoji(message, audio, name):
     bot.send_message(message.chat.id, "ОК, теперь напиши теги в формате:\n"
                                       "#tag1 #tag2 #tag3...\n"
                                       "если тегов нет просто напишите \n/empty")
-    bot.register_next_step_handler(message, sticker_description, audio, NAME)
+    bot.register_next_step_handler(message, you_anonimus, audio, NAME)
 
 
-def sticker_description(message, audio, NAME):
+def you_anonimus(message, audio, NAME):
     if message.text == "/empty":
         TAGS = "#пусто"
         print(f"        > tag SKIPPED >")
     else:
         TAGS = message.text
         print(f"        > TAGS: {TAGS}")
+    markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
+    nona = types.KeyboardButton("нет, показывать мой ник")
+    anon = types.KeyboardButton("скрыть мой ник")
+    markup.add(nona)
+    markup.add(anon)
+    bot.send_message(message.chat.id, "ОК, теперь реши, остаться анонимным или показать что"
+                                      " этот стикер добавил ты???", reply_markup=markup)
+    bot.register_next_step_handler(message, sticker_description, audio, NAME, TAGS)
 
+
+def sticker_description(message, audio, NAME, TAGS):
+    if message.text == "скрыть мой ник":
+        ANNONIM = True
+    else:
+        ANNONIM = False
+        print(f"        > ANNONIM = {ANNONIM}")
     markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
     r18 = types.KeyboardButton("(R18)")
     markup.add(r18)
     bot.send_message(message.chat.id, "ОК, теперь напиши описание(откуда этот трек или его настоящий автор):\n"
                                       "!!! если стикер не предназначен для совершеннолетней аудитории допишите (R18)\n"
                                       "если описания нет просто напишите \n/empty", reply_markup=markup)
-    bot.register_next_step_handler(message, sticker_to_base, audio, NAME, TAGS)
+    bot.register_next_step_handler(message, sticker_to_base, audio, NAME, TAGS, ANNONIM)
 
 
-def sticker_to_base(message, audio, NAME, TAGS):
-    BY = f"{message.from_user.username}"
+def sticker_to_base(message, audio, NAME, TAGS, ANNONIM):
+    if ANNONIM:
+        BY = "@&*#@?"
+    else:
+        BY = f"{message.from_user.username}"
+
 
     if message.text == "/empty":
         DESCRIPTION = f"@{BY} ● "
@@ -939,6 +1060,19 @@ def sticker_to_base(message, audio, NAME, TAGS):
         DESCRIPTION = f"@{BY} ● {message.text}"
         print(f"          > DESCR. : {DESCRIPTION}")
 
+    bot.send_message(message.chat.id, "Все правильно, если да, то \n"
+                                      "/okey \n"
+                                      "если нет \n"
+                                      "/no \n"
+                                      "\n"
+                                      f"Data:\n"
+                                      f"   -name  :{NAME}\n"
+                                      f"   -by    :{BY}\n"
+                                      f"   -desc. :{DESCRIPTION}")
+    bot.register_next_step_handler(message, add_sticker2, NAME, audio, BY, DESCRIPTION, TAGS)
+
+
+def add_sticker2(message, NAME, audio, BY, DESCRIPTION, TAGS):
     try:
         file_info = bot.get_file(audio.audio.file_id)
         downloaded_file = bot.download_file(file_info.file_path)
@@ -969,7 +1103,6 @@ def sticker_to_base(message, audio, NAME, TAGS):
                              audio=open(SCR, 'rb'),
                              title=f"{NAME}",
                              performer=f"{DESCRIPTION}")
-
     cursor.execute('INSERT INTO audio (NAME, FILE_ID, DESCRIPTION, TAGS) VALUES (?, ?, ?, ?)',
                    (NAME, fid.voice.file_id, DESCRIPTION, TAGS))
     conn.commit()
@@ -1027,14 +1160,15 @@ def start_generate_txt2_img(message):
 # noinspection SpellCheckingInspection, PyShadowingNames
 def poooling_bot():
     global stop_thread
+    end_time = time.time()
+    print(f'\n(elapsed: ~{round(float(end_time - start_time), 3)}sec) ',end="")
     while True:
         try:
-            end_time = time.time()
-            print(f'DONE (elapsed: ~{round(float(end_time - start_time), 3)}sec)\n\n')
+            print("DONE")
             bot.polling(none_stop=True, interval=0)
-            print("STOPPING BOT ........ ", end="")
+            print("\n\nSTOPPING BOT ........ ", end="")
             stop_thread = True
-            thread.join()
+            # thread.join()
             print("DONE")
             break
         except Exception as Except_:
@@ -1049,20 +1183,19 @@ def poooling_bot():
             print("DONE\n\n>>>")
 
 
-
 print("DONE")
 
 botname = str(bot.get_my_name()).split(": ")[1]
-botname = botname[:len(botname)-2]
+botname = botname[:len(botname) - 2]
 botname = botname[1:]
 print(
-      f'--------------------------------------------\n'
-      f' > BOT NAME      : {botname}\n'
-      f' > BOT ADMINS    : {Audio_Chat}\n'
-      f'--------------------------------------------\n'
-      f' > NOW TIME      : {datetime.now()}\n'
-      f' > AUTHOR        : @m6rshm3ll0w\n'
-      f'--------------------------------------------')
+    f'--------------------------------------------\n'
+    f' > BOT NAME      : {botname}\n'
+    f' > BOT ADMINS    : {Audio_Chat}\n'
+    f'--------------------------------------------\n'
+    f' > NOW TIME      : {datetime.now()}\n'
+    f' > AUTHOR        : @m6rshm3ll0w\n'
+    f'--------------------------------------------')
 
 print("STARTING BOT PROCESS ........ ", end="")
 
