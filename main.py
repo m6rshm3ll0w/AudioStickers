@@ -498,7 +498,7 @@ def handler(callback):
         n_of_s = len(Stickers)
 
         AUTHORS = (f"code {VERSION}\n"
-                   f"> @m6rshm3ll0w\n"
+                   f"> @m6rshm3ll0w & @LLJupo\n"
                    f"_____________________\n"
                    f"audio : {n_of_s}\n"
                    f"> @VaLm1n\n"
