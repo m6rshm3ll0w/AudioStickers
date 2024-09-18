@@ -5,9 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d51fea1e-38fa-48cb-8cd9-549c146d1a1f" name="Changes" comment="FINAL BUG FIX">
-      <change afterPath="$PROJECT_DIR$/backupbd.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Dbase.db3" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Dbase.db3" beforeDir="false" afterPath="$PROJECT_DIR$/Dbase.db3" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -221,16 +220,5 @@
     <MESSAGE value="added a chatgpt to inline_mode and banlist(beta)" />
     <MESSAGE value="FINAL BUG FIX" />
     <option name="LAST_COMMIT_MESSAGE" value="FINAL BUG FIX" />
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>27</line>
-          <option name="timeStamp" value="4" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
   </component>
 </project>

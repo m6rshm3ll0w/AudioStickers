@@ -1,5 +1,7 @@
 import types
 import uuid
+
+import requests
 from telebot import *
 import sqlite3
 
@@ -12,8 +14,9 @@ import shutil
 from datetime import datetime
 import threading
 from groq import Groq
+from telegram.ext import Updater, CommandHandler, CallbackContext
 
-VERSION = "1.2.2"
+VERSION = "2.0"
 
 print(f"BOT VERSION {VERSION} \n\n\n")
 print(f"STARTING BOT PROCESS: ")
@@ -48,6 +51,7 @@ print(f"DONE")
 print(f" > INITIALISE BOT ........... ", end="")
 try:
     bot = telebot.TeleBot("7426229975:AAH46MNDug2wmHlOfhBlgUmL7SrjxhFX4gM")
+    # bot = telebot.TeleBot("7024481224:AAEDijavUxRhEYnPt-4byumffH-WJaJmb0E")
     print("DONE")
 except Exception as Except_:
     print("NO\n"
@@ -102,19 +106,12 @@ print("DONE")
 print(f" > INITIALISE ALL BOT FUNC .. ", end="")
 
 
-def ADDD_Audio(voice, random_id=False):
-    print(f"    > rendered audio: ID{voice[0]}")
-    AFID = str(uuid.uuid4())
-    if not random_id:
-        v = types.InlineQueryResultAudio(
-            id=f"{voice[0]}",
-            title=f"{voice[1]}",
-            audio_url=voice[2])
-    else:
-        v = types.InlineQueryResultAudio(
-            id=f"{AFID}",
-            title=f"{voice[1]}",
-            audio_url=voice[2])
+def ADDD_Audio(voice):
+    print(f"> {voice[0]} ", end="")
+    v = types.InlineQueryResultAudio(
+        id=f"{voice[0]}",
+        title=f"{voice[1]}",
+        audio_url=voice[2])
 
     return v
 
@@ -177,35 +174,34 @@ def handle_inline_query(query):
     print("ACTIVE INLINE MODE ▼")
 
     if query_text:
+        if query_text.startswith("&"):
+            print(f">>> user usig chatgpt: {query_text}\n")
+            query_text = query_text[1:]
+            if query_text.endswith("#"):
+                query_text = query_text[:len(query_text) - 1]
+                print(query_text)
+                header = types.InlineQueryResultArticle(
+                    id='-1',
+                    title="Запрос к ChatGpt:",
+                    description=f"Промпт: {query_text}",
+                    input_message_content=types.InputTextMessageContent(message_text=f"Запрос к ChatGpt: "
+                                                                                     f"{query_text}"),
+                    thumbnail_url=Search_icon,
+                )
+                result.append(header)
+                result.append(ADDD_Chatgpt(query_text))
+            else:
+                header = types.InlineQueryResultArticle(
+                    id='-1',
+                    title="ChatGPT",
+                    description="В конце промпта напиши # для запроса",
+                    input_message_content=types.InputTextMessageContent(message_text=f"Запрос к ChatGpt: "
+                                                                                     f"{query_text}"),
+                    thumbnail_url=Chatgpt_ICON,
+                )
+                result.append(header)
 
-        # if query_text.startswith("&"):
-        #     print(f">>> user usig chatgpt: {query_text}\n")
-        #     query_text = query_text[1:]
-        #     if query_text.endswith("#"):
-        #         query_text = query_text[:len(query_text) - 1]
-        #         print(query_text)
-        #         header = types.InlineQueryResultArticle(
-        #             id='-1',
-        #             title="Запрос к ChatGpt:",
-        #             description=f"Промпт: {query_text}",
-        #             input_message_content=types.InputTextMessageContent(message_text=f"Запрос к ChatGpt: "
-        #                                                                              f"{query_text}"),
-        #             thumbnail_url=Search_icon,
-        #         )
-        #         result.append(header)
-        #         result.append(ADDD_Chatgpt(query_text))
-        #     else:
-        #         header = types.InlineQueryResultArticle(
-        #             id='-1',
-        #             title="ChatGPT",
-        #             description="В конце промпта напиши # для запроса",
-        #             input_message_content=types.InputTextMessageContent(message_text=f"Запрос к ChatGpt: "
-        #                                                                              f"{query_text}"),
-        #             thumbnail_url=Chatgpt_ICON,
-        #         )
-        #         result.append(header)
-
-        if query_text.startswith("$"):
+        elif query_text.startswith("$"):
             print(">>> user searching genlist:\n")
             query_text = query_text[1:]
             if query_text != "":
@@ -298,17 +294,18 @@ def handle_inline_query(query):
         print(">>> loading base page")
         header = types.InlineQueryResultArticle(
             id='0',
-            title="для справки по поиску",
-            description="нажми 'перейти к боту' и в чате нажми \n'как пользоваться', также ты можешь генерировать "
-                        "изображения",
-            input_message_content=types.InputTextMessageContent(message_text="Для справки по поиску"),
+            title="Стикеры",
+            description="для справки по поиску нажми 'перейти к боту' и в чате нажми \n"
+                        "'как пользоваться'",
+            input_message_content=types.InputTextMessageContent(message_text="-"),
             thumbnail_url=Search_icon,
         )
         result.append(header)
         cursor.execute('SELECT * FROM audio')
         Voices = cursor.fetchall()
-        for x, voice in enumerate(Voices[:49]):
-            result.append(result.append(ADDD_Audio(voice, random_id=True)))
+        # random.shuffle(Voices)
+        for x, voice in enumerate(Voices[:40]):
+            result.append(result.append(ADDD_Audio(voice)))
 
     bot.answer_inline_query(query.id, result, switch_pm_text="перейти к боту / добавить стикер",
                             switch_pm_parameter="start")
@@ -317,8 +314,36 @@ def handle_inline_query(query):
 @bot.message_handler(commands=["start"])
 def start(message):
     print(">>> user send a /start command")
-    sent_message = bot.send_message(message.chat.id, "Запуск...")
+    user = message.chat.id
+    idu = (user,)
+
+    cursor.execute(f'SELECT ID FROM banlist')
+    BaNNED_USER = cursor.fetchall()
+
+    cursor.execute(f'SELECT ID FROM admins')
+    ADM_USER = cursor.fetchall()
+
+    cursor.execute(f'SELECT F2A FROM admins WHERE ID = ?',
+                   (message.chat.id,))
+    F2A_status = cursor.fetchall()
+
+    print(F2A_status)
+
+    if idu in ADM_USER and idu not in BaNNED_USER and F2A_status[0][0] == "False":
+        bot.send_message(message.chat.id, f"@{message.from_user.username} вы админ!\n"
+                              f"но для подтверждения личности вам нужно отправить нам свою геопозицию"
+                              f" и номер телефона... для прохождения проверки введите /F2A либо можете "
+                              f"пропустить этот этап и тогда ваше админство отменяется, если в течении "
+                              f"2 недель после назначения вы не отправите эти данные, "
+                              f"команда бота @asmembot\n\n"
+                              f"по вопросам пишите 'm1k0.netlify.app/botform' ")
+        sent_message = bot.send_message(message.chat.id, "Запуск...")
+
+        time.sleep(12)
+    else:
+        sent_message = bot.send_message(message.chat.id, "Запуск...")
     check_user_last_time(message)
+
     main_menu(sent_message)
 
 
@@ -338,6 +363,7 @@ def main_menu(message, ADMIN_PANEL=True):
                     "\n"
                     "**ChangeLog**\n"
                     "1.0 β - генерация картинок и возрастной рейтинг\n"
+                    "2.0 - CHAT GPT и статистика пользователей"
                     # "1.1 - ChatGpt и просмотр-отправка ранее генерированных картинок в Inline-режиме\n"
                     "\n"
                     "подробнее о боте во вкладке **'Как пользоваться?'**\n"
@@ -365,7 +391,12 @@ def main_menu(message, ADMIN_PANEL=True):
 
     cursor.execute(f'SELECT ID FROM admins')
     ADM_USER = cursor.fetchall()
-    if idu in ADM_USER and idu not in BaNNED_USER:
+
+    cursor.execute(f'SELECT F2A FROM admins WHERE ID = ?',
+                   (message.chat.id,))
+    F2A_status = cursor.fetchall()
+
+    if idu in ADM_USER and idu not in BaNNED_USER and F2A_status[0][0] == "True":
 
         if ADMIN_PANEL:
             adm = types.InlineKeyboardButton("👇👇Возможности админов👇👇", callback_data="admin_panel_dis")
@@ -405,6 +436,7 @@ def main_menu(message, ADMIN_PANEL=True):
 
 
 def all_s(message):
+    check_user_last_time(message)
     print("    >> loading a viewer")
     markup = types.InlineKeyboardMarkup()
     back = types.InlineKeyboardButton("В главное меню 😉", callback_data="main_menu")
@@ -466,6 +498,7 @@ def handler(callback):
         cursor.execute(f'SELECT * FROM audio')
         Stickers = cursor.fetchall()
         n_of_s = len(Stickers)
+
         AUTHORS = (f"code {VERSION}\n"
                    f"> @m6rshm3ll0w\n"
                    f"_____________________\n"
@@ -496,9 +529,9 @@ def handler(callback):
                               "-> по страницам\n"
                               "-> по тегам - #\n"
                               "-> ранее сгенерированные картинки - $\n"
-                              # "-> вызов Chat GPT - '&(запрос)#'\n"
+                              "-> вызов Chat GPT - '&(запрос)#'\n"
                               "\n"
-                              "__БОТ__\n"
+                              "**БОТ**\n"
                               "-> Напиши ```bash /generate (твой промпт)``` и подожди ~20сек\n"
                               "\n"
                               "**ВАЖНОЕ**\n"
@@ -509,7 +542,7 @@ def handler(callback):
                               "**ПРАВИЛА**\n"
                               "УСЛОВИЯ добавления стикера:\n"
                               "1.Убедитесь, что такого стикера нет\n"
-                              "2.Добавте '(R18)', если рейтинг аудио 18+\n"
+                              "2.Добавьте '(R18)', если рейтинг аудио 18+\n"
                               "3.За 2 нарушения правил вы получаете предупреждение, "
                               "а за 3 - вы не можете добавлять стикеры\n"
                               "\n"
@@ -576,7 +609,7 @@ def handler(callback):
         ADM_LIST(callback.message)
 
     elif callback.data == "userlist":
-        print("    > admlist")
+        print("    > usrlist")
         USR_LIST(callback.message)
 
     elif callback.data == "backupbd":
@@ -619,7 +652,7 @@ def handler(callback):
     elif callback.data == "license":
         LICENSE = ("УСЛОВИЯ добавления стикера:\n"
                    "1.Убедитесь, что такого стикера нет\n"
-                   "2.Добавте '(R18)', если рейтинг аудио 18+\n"
+                   "2.Добавьте '(R18)', если рейтинг аудио 18+\n"
                    "3.За 2 нарушения правил вы получаете предупреждение, "
                    "а за 3 - вы не можете добавлять стикеры")
         bot.answer_callback_query(callback_query_id=callback.id, text=LICENSE,
@@ -689,7 +722,8 @@ def ADM_LIST(message):
     for admuser in admins:
         f = (f"ID {admuser[0]}\n"
              f"NAME {admuser[1]}\n"
-             f"> date. : {admuser[2]}\n\n")
+             f"> date : {admuser[2]}\n"
+             f"> F2A  : {admuser[5]} \n\n")
         result = result + f
     bot.edit_message_text(text=result, chat_id=message.chat.id, message_id=message.id, reply_markup=markup)
 
@@ -709,7 +743,8 @@ def USR_LIST(message):
     for user in users:
         f = (f"ID {user[0]}\n"
              f"NAME {user[1]}\n"
-             f"> last_login. : {user[2]}\n\n")
+             f"> last_login : {user[2]}\n"
+             f"> s: {user[3]} i: {user[4]}\n\n")
         result = result + f
     bot.edit_message_text(text=result, chat_id=message.chat.id, message_id=message.id, reply_markup=markup)
 
@@ -785,11 +820,18 @@ def ADM_ID_2(message, IDs, mmss, usernamee):
     bot.delete_message(message.chat.id, message.message_id)
     if message.text == f"я хочу сделать админом {IDs}":
         print(f"        > adding acepted")
-        cursor.execute("INSERT INTO admins (ID, USERNAME, DATE) VALUES (?, ?, ?)",
-                       (IDs, usernamee, str(datetime.now()).split(' ')[0]))
+        cursor.execute("INSERT INTO admins (ID, USERNAME, DATE, F2A) VALUES (?, ?, ?, ?)",
+                       (IDs, usernamee, str(datetime.now()).split(' ')[0], "False"))
         conn.commit()
-        mmss = bot.edit_message_text(chat_id=mmss.chat.id, message_id=mmss.message_id, text=f"{IDs} админ!")
-        bot.send_message(IDs, "Вы админ!!!")
+        mmss = bot.edit_message_text(chat_id=mmss.chat.id, message_id=mmss.message_id,
+                                     text=f"{usernamee} - админ!\n")
+        bot.send_message(IDs, f"{usernamee} вы админ!\n"
+                                          f"но для подтверждения личности вам нужно отправить нам свою геопозицию"
+                                          f" и номер телефона... для прохождения проверки введите /F2A либо можете "
+                                          f"пропустить этот этап и тогда ваше админство отменяется, если в течении "
+                                          f"2 недель после назначения вы не отправите эти данные, "
+                                          f"команда бота @asmembot\n\n"
+                                          f"по вопросам пишите 'm1k0.netlify.app/botform' ")
         time.sleep(2)
         main_menu(mmss)
     else:
@@ -1067,7 +1109,7 @@ def ED(message, IDs, mmss):
         start(message)
 
 
-def check_user_last_time(message):
+def check_user_last_time(message, added_img=False, added_sticker=False):
     ID = message.chat.id
     Name = f"@{message.from_user.username}"
     Now = str(datetime.now()).split(".")[0]
@@ -1075,11 +1117,21 @@ def check_user_last_time(message):
     user = cursor.execute('SELECT * FROM users WHERE ID = ?',
                           (ID,)).fetchall()
     if not user:
-        cursor.execute('INSERT INTO users (ID, NAME, LASTTIME) VALUES (?, ?, ?)',
-                       (ID, Name, Now))
+        cursor.execute('INSERT INTO users (ID, NAME, LASTTIME, STICKERS, IMAGES) VALUES (?, ?, ?, ?, ?)',
+                       (ID, Name, Now, "0", "0"))
     elif user:
         cursor.execute(f'UPDATE users SET LASTTIME = ? WHERE ID = ?',
                        (Now, ID))
+
+    if added_img:
+        img_gen = int(user[0][4])
+        cursor.execute(f'UPDATE users SET IMAGES = ? WHERE ID = ?',
+                       (f"{img_gen + 1}", ID))
+    if added_sticker:
+        stickers = int(user[0][3])
+        cursor.execute(f'UPDATE users SET IMAGES = ? WHERE ID = ?',
+                       (f"{stickers + 1}", ID))
+
     conn.commit()
 
 
@@ -1182,7 +1234,8 @@ def sticker_description(message, audio, NAME, TAGS, mmss):
     markup.add(empty)
     markup.add(r18)
     mmss = bot.send_message(message.chat.id, "ОК, теперь напиши описание(откуда этот трек или его настоящий автор):\n"
-                                             "!!! если стикер не предназначен для совершеннолетней аудитории допишите (R18)\n"
+                                             "!!! если стикер не предназначен для совершеннолетней аудитории допишите "
+                                             "(R18)\n"
                             , reply_markup=markup)
     bot.register_next_step_handler(message, sticker_to_base, audio, NAME, TAGS, ANNONIM, mmss)
 
@@ -1227,7 +1280,7 @@ def add_sticker2(message, NAME, audio, BY, DESCRIPTION, TAGS, mmss):
             downloaded_file = bot.download_file(file_info.file_path)
 
         FID = str(uuid.uuid4())
-        SCR = f'audio/@{BY}'
+        SCR = f'converted/'
 
         bot.delete_message(message.chat.id, message.message_id)
         bot.delete_message(message.chat.id, mmss.message_id)
@@ -1236,7 +1289,26 @@ def add_sticker2(message, NAME, audio, BY, DESCRIPTION, TAGS, mmss):
             path = os.path.join(os.getcwd(), SCR)
             os.mkdir(path)
 
-        SCR = f"{SCR}/{FID}.ogg"
+        SCR = f"converted/to_voice_last.mp3"
+
+        with open(SCR, 'wb') as new_file:
+            new_file.write(downloaded_file)
+            new_file.close()
+
+        voice = bot.send_voice(message.chat.id, open(SCR, "rb"))
+
+        ##############################################################3
+
+        file_info = bot.get_file(voice.voice.file_id)
+        downloaded_file = bot.download_file(file_info.file_path)
+
+        FID = str(uuid.uuid4())
+        SCR = f'audio/@{BY}'
+        if not os.path.isdir(os.path.join(os.getcwd(), SCR)):
+            path = os.path.join(os.getcwd(), SCR)
+            os.mkdir(path)
+
+        SCR = f"{SCR}/{FID}.wav"
 
         with open(SCR, 'wb') as new_file:
             new_file.write(downloaded_file)
@@ -1268,6 +1340,7 @@ def add_sticker2(message, NAME, audio, BY, DESCRIPTION, TAGS, mmss):
                                           f"   -name  :{NAME}\n"
                                           f"   -by    :{BY}\n"
                                           f"   -desc. :{DESCRIPTION}", reply_markup=markup)
+        check_user_last_time(message, added_sticker=True)
 
         print(f"            > STICKER ADDED SUCCESSFUL")
     else:
@@ -1281,6 +1354,7 @@ def add_sticker2(message, NAME, audio, BY, DESCRIPTION, TAGS, mmss):
         start(message)
 
 
+
 @bot.message_handler(commands=["generate"])
 def start_generate_txt2_img(message):
     print(">>> GENERATE func.")
@@ -1290,34 +1364,113 @@ def start_generate_txt2_img(message):
         if PROMPT == "":
             print("    > INCORRECT ARGs")
             fff = bot.send_message(message.chat.id, "Неправильный вызов команды\n"
-                                                    "> запуск со стандартным промптом")
+                                                    "> попробуйте написать так:\n"
+                                                    "/generate кот в облаках")
         else:
             print(f"    > Generation by prompt: {PROMPT}, BY {message.from_user.username}")
             fff = bot.send_message(message.chat.id, "Генерация запущена, подожди чуть-чуть!")
 
-        s_time = time.time()
-        Scr = txt2img(PROMPT, message.from_user.username)
-        e_time = time.time()
-        bot.delete_message(message.chat.id, fff.message_id)
-        print(f"      > Generation SUCCESSFULLY : elapsed {round(float(e_time - s_time), 2)}sec")
+            s_time = time.time()
+            Scr = txt2img(PROMPT, message.from_user.username)
+            e_time = time.time()
+            bot.delete_message(message.chat.id, fff.message_id)
+            print(f"      > Generation SUCCESSFULLY : elapsed {round(float(e_time - s_time), 2)}sec")
 
-        if PROMPT == "":
-            bot.send_photo(message.chat.id, open(Scr, 'rb'),
-                           f"generated by command: \n"
-                           f">> /generate очень пушистый милый кот в шляпе, 3D мир, Blender, Рендеринг\n\n"
-                           f"elapsed: ~{round(float(e_time - s_time), 2)}sec")
-            pass
-        else:
-            gen_photo = bot.send_photo(message.chat.id, open(Scr, 'rb'),
-                                       f"generated by command: \n>> /generate {PROMPT}\n\n"
-                                       f"elapsed: ~{round(float(e_time - s_time), 2)}sec")
-            cursor.execute('INSERT INTO genlist (PROMPT, BY, FILE_ID) VALUES (?, ?, ?)',
-                           (PROMPT, f"@{message.from_user.username}",
-                            gen_photo.photo[-1].file_id))
-            conn.commit()
+            if PROMPT == "":
+                # bot.send_photo(message.chat.id, open(Scr, 'rb'),
+                #                f"generated by command: \n"
+                #                f">> /generate очень пушистый милый кот в шляпе, 3D мир, Blender, Рендеринг\n\n"
+                #                f"elapsed: ~{round(float(e_time - s_time), 2)}sec")
+
+                pass
+            else:
+                check_user_last_time(message, added_img=True)
+                gen_photo = bot.send_photo(message.chat.id, open(Scr, 'rb'),
+                                           f"generated by command: \n>> /generate {PROMPT}\n\n"
+                                           f"elapsed: ~{round(float(e_time - s_time), 2)}sec")
+                cursor.execute('INSERT INTO genlist (PROMPT, BY, FILE_ID) VALUES (?, ?, ?)',
+                               (PROMPT, f"@{message.from_user.username}",
+                                gen_photo.photo[-1].file_id))
+                conn.commit()
     else:
         print("    > INCORRECT ARGs")
         bot.send_message(message.chat.id, "Неправильный вызов команды, попробуй ещё!")
+
+
+@bot.message_handler(commands=["F2A"])
+def confirm_f2a(message):
+    user = message.chat.id
+    idu = (user,)
+
+    cursor.execute(f'SELECT ID FROM admins')
+    ADM_USER = cursor.fetchall()
+
+    cursor.execute(f'SELECT ID FROM banlist')
+    BaNNED_USER = cursor.fetchall()
+
+    cursor.execute(f'SELECT F2A FROM admins WHERE ID = ?',
+                   (message.chat.id,))
+    F2A_status = cursor.fetchall()
+
+    if idu in ADM_USER and idu not in BaNNED_USER and F2A_status[0][0] == "False":
+        keyboard = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True,one_time_keyboard=True)
+        button_geo = types.KeyboardButton(text="Отправить номер Номер телефона", request_contact=True)
+        keyboard.add(button_geo)
+        bot.send_message(message.chat.id, "Привет, это процедура добавления F2A, сначала отправь номер телефона",
+                         reply_markup=keyboard)
+    else:
+        bot.send_message(message.chat.id, "Вы не админ, или уже добавили F2A!!!",
+                         reply_to_message_id=message.message_id)
+
+
+@bot.message_handler(content_types=['contact'])
+def handle_contact(message):
+    if message.contact is not None:
+        print(type(message.contact.phone_number))
+        keyboard = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True, one_time_keyboard=True)
+        button_geo = types.KeyboardButton(text="Отправить геопозицию", request_location=True)
+        keyboard.add(button_geo)
+        bot.send_message(message.chat.id, "Спасибо, теперь последний этап, отправь геопозицию!"
+                                          "(после нажатия кнопки подожди несколько секунд)",
+                         reply_to_message_id=message.message_id, reply_markup=keyboard)
+        cursor.execute(f'UPDATE admins SET NUMBER_PHONE = ? WHERE ID = ?',
+                       (message.contact.phone_number, message.chat.id))
+        conn.commit()
+
+
+@bot.message_handler(content_types=['location'])
+def handle_location(message):
+    if message.location is not None:
+        latitude = message.location.latitude
+        longitude = message.location.longitude
+        address = get_address(latitude, longitude)
+        geo = f"🗺️ {address}"
+        bot.send_message(message.chat.id, "Спасибо, активируем F2A!!!",
+                         reply_to_message_id=message.message_id)
+        cursor.execute(f'UPDATE admins SET GEO = ?, F2A = ? WHERE ID = ?',
+                       (geo, "True", message.chat.id))
+        conn.commit()
+
+        markup = types.InlineKeyboardMarkup()
+        back = types.InlineKeyboardButton("в главное меню 👌", callback_data="del_msg")
+        markup.add(back)
+
+        bot.send_message(message.chat.id, "F2A активирован!!!",
+                         reply_to_message_id=message.message_id, reply_markup=markup)
+
+
+def get_address(latitude, longitude):
+    url = f'https://nominatim.openstreetmap.org/reverse?lat={latitude}&lon={longitude}&format=json'
+
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        if 'display_name' in data:
+            return data['display_name']
+        else:
+            return "Адрес не найден."
+    else:
+        return "Ошибка при запросе к API."
 
 
 # noinspection SpellCheckingInspection, PyShadowingNames
