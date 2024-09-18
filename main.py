@@ -314,7 +314,7 @@ def start(message):
     print(">>> user send a /start command")
     user = message.chat.id
     idu = (user,)
-
+    check_user_last_time(message)
     cursor.execute(f'SELECT ID FROM banlist')
     BaNNED_USER = cursor.fetchall()
 
@@ -328,24 +328,31 @@ def start(message):
     print(F2A_status)
 
     if idu in ADM_USER and idu not in BaNNED_USER and F2A_status[0][0] == "False":
-        bot.send_message(message.chat.id, f"@{message.from_user.username} вы админ!\n"
-                              f"но для подтверждения личности вам нужно отправить нам свою геопозицию"
-                              f" и номер телефона... для прохождения проверки введите /F2A либо можете "
-                              f"пропустить этот этап и тогда ваше админство отменяется, если в течении "
-                              f"2 недель после назначения вы не отправите эти данные, "
-                              f"команда бота @asmembot\n\n"
-                              f"по вопросам пишите 'm1k0.netlify.app/botform' ")
-        sent_message = bot.send_message(message.chat.id, "Запуск...")
-
-        time.sleep(12)
+        markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
+        empty = types.KeyboardButton("/skip")
+        markup.add(empty)
+        sent_message = bot.send_message(message.chat.id,
+                                        text=f"@{message.from_user.username} вы админ!\n"
+                                             f"но для подтверждения личности вам нужно отправить нам свою геопозицию"
+                                             f" и номер телефона... для прохождения проверки введите /F2A либо можете "
+                                             f"пропустить этот этап и тогда ваше админство отменяется, "
+                                             f"если в течении"
+                                             f"2 недель после назначения вы не отправите эти данные, "
+                                             f"команда бота @asmembot\n\n"
+                                             f"для пропуска нажмите /skip\n"
+                                             f"по вопросам пишите 'm1k0.netlify.app/botform' ", reply_markup=markup)
+        bot.register_next_step_handler(message, main_menu, msg_for_del=sent_message)
     else:
         sent_message = bot.send_message(message.chat.id, "Запуск...")
-    check_user_last_time(message)
+        check_user_last_time(message)
 
-    main_menu(sent_message)
+        main_menu(sent_message)
 
 
-def main_menu(message, ADMIN_PANEL=True):
+def main_menu(message, ADMIN_PANEL=True, msg_for_del="False"):
+    if msg_for_del != "False":
+        bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+        message = msg_for_del
     print("    > loading a main_menu")
     main_text = str("@asmemc - канал с новостями "
                     "(подпишитесь пж)\n"
@@ -824,12 +831,12 @@ def ADM_ID_2(message, IDs, mmss, usernamee):
         mmss = bot.edit_message_text(chat_id=mmss.chat.id, message_id=mmss.message_id,
                                      text=f"{usernamee} - админ!\n")
         bot.send_message(IDs, f"{usernamee} вы админ!\n"
-                                          f"но для подтверждения личности вам нужно отправить нам свою геопозицию"
-                                          f" и номер телефона... для прохождения проверки введите /F2A либо можете "
-                                          f"пропустить этот этап и тогда ваше админство отменяется, если в течении "
-                                          f"2 недель после назначения вы не отправите эти данные, "
-                                          f"команда бота @asmembot\n\n"
-                                          f"по вопросам пишите 'm1k0.netlify.app/botform' ")
+                              f"но для подтверждения личности вам нужно отправить нам свою геопозицию"
+                              f" и номер телефона... для прохождения проверки введите /F2A либо можете "
+                              f"пропустить этот этап и тогда ваше админство отменяется, если в течении "
+                              f"2 недель после назначения вы не отправите эти данные, "
+                              f"команда бота @asmembot\n\n"
+                              f"по вопросам пишите 'm1k0.netlify.app/botform' ")
         time.sleep(2)
         main_menu(mmss)
     else:
@@ -1352,7 +1359,6 @@ def add_sticker2(message, NAME, audio, BY, DESCRIPTION, TAGS, mmss):
         start(message)
 
 
-
 @bot.message_handler(commands=["generate"])
 def start_generate_txt2_img(message):
     print(">>> GENERATE func.")
@@ -1410,51 +1416,70 @@ def confirm_f2a(message):
                    (message.chat.id,))
     F2A_status = cursor.fetchall()
 
+    bot.delete_message(message.chat.id, message.message_id)
+
     if idu in ADM_USER and idu not in BaNNED_USER and F2A_status[0][0] == "False":
-        keyboard = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True,one_time_keyboard=True)
+        keyboard = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True, one_time_keyboard=True)
         button_geo = types.KeyboardButton(text="Отправить номер Номер телефона", request_contact=True)
         keyboard.add(button_geo)
-        bot.send_message(message.chat.id, "Привет, это процедура добавления F2A, сначала отправь номер телефона",
-                         reply_markup=keyboard)
+        mmss = bot.send_message(message.chat.id, "Привет, это процедура добавления F2A, сначала отправь номер телефона",
+                                reply_markup=keyboard)
+        bot.register_next_step_handler(message, handle_contact, mmss)
     else:
-        bot.send_message(message.chat.id, "Вы не админ, или уже добавили F2A!!!",
-                         reply_to_message_id=message.message_id)
+        markup = types.InlineKeyboardMarkup()
+        back = types.InlineKeyboardButton("в главное меню 👌", callback_data="main_menu")
+        markup.add(back)
+        bot.send_message(message.chat.id, "Вы не админ, или уже добавили F2A!!!", reply_markup=markup)
 
 
-@bot.message_handler(content_types=['contact'])
-def handle_contact(message):
+def handle_contact(message, mmss):
+    bot.delete_message(message.chat.id, mmss.message_id)
     if message.contact is not None:
         print(type(message.contact.phone_number))
         keyboard = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True, one_time_keyboard=True)
         button_geo = types.KeyboardButton(text="Отправить геопозицию", request_location=True)
         keyboard.add(button_geo)
-        bot.send_message(message.chat.id, "Спасибо, теперь последний этап, отправь геопозицию!"
-                                          "(после нажатия кнопки подожди несколько секунд)",
-                         reply_to_message_id=message.message_id, reply_markup=keyboard)
+        mmss = bot.send_message(message.chat.id, "Спасибо, теперь последний этап, отправь геопозицию!"
+                                                 "(после нажатия кнопки подожди несколько секунд)",
+                                reply_markup=keyboard)
         cursor.execute(f'UPDATE admins SET NUMBER_PHONE = ? WHERE ID = ?',
                        (message.contact.phone_number, message.chat.id))
         conn.commit()
 
+        bot.delete_message(message.chat.id, message.message_id)
+        bot.register_next_step_handler(message, handle_location, mmss)
+    else:
+        markup = types.InlineKeyboardMarkup()
+        back = types.InlineKeyboardButton("в главное меню 👌", callback_data="main_menu")
+        markup.add(back)
+        bot.send_message(message.chat.id, "Ошибка, попробуйте снова", reply_markup=markup)
 
-@bot.message_handler(content_types=['location'])
-def handle_location(message):
+
+def handle_location(message, mmss):
+    bot.delete_message(message.chat.id, mmss.message_id)
     if message.location is not None:
         latitude = message.location.latitude
         longitude = message.location.longitude
         address = get_address(latitude, longitude)
         geo = f"🗺️ {address}"
-        bot.send_message(message.chat.id, "Спасибо, активируем F2A!!!",
-                         reply_to_message_id=message.message_id)
+        mmss = bot.send_message(message.chat.id, "Спасибо, активируем F2A!!!",
+                                reply_to_message_id=message.message_id)
         cursor.execute(f'UPDATE admins SET GEO = ?, F2A = ? WHERE ID = ?',
                        (geo, "True", message.chat.id))
         conn.commit()
 
         markup = types.InlineKeyboardMarkup()
-        back = types.InlineKeyboardButton("в главное меню 👌", callback_data="del_msg")
+        back = types.InlineKeyboardButton("в главное меню 👌", callback_data="main_menu")
         markup.add(back)
 
-        bot.send_message(message.chat.id, "F2A активирован!!!",
-                         reply_to_message_id=message.message_id, reply_markup=markup)
+        bot.delete_message(message.chat.id, message.message_id)
+        bot.edit_message_text(chat_id=message.chat.id,
+                              message_id=mmss.message_id, text="F2A активирован!!!", reply_markup=markup)
+    else:
+        markup = types.InlineKeyboardMarkup()
+        back = types.InlineKeyboardButton("в главное меню 👌", callback_data="main_menu")
+        markup.add(back)
+        bot.send_message(message.chat.id, "Ошибка, попробуйте снова", reply_markup=markup)
 
 
 def get_address(latitude, longitude):
