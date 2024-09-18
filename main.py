@@ -302,7 +302,7 @@ def handle_inline_query(query):
         cursor.execute('SELECT * FROM audio')
         Voices = cursor.fetchall()
         # random.shuffle(Voices)
-        for x, voice in enumerate(Voices[:40]):
+        for x, voice in enumerate(Voices[:49]):
             result.append(result.append(ADDD_Audio(voice)))
 
     bot.answer_inline_query(query.id, result, switch_pm_text="перейти к боту / добавить стикер",
