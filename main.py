@@ -349,10 +349,10 @@ def start(message):
         main_menu(sent_message)
 
 
-def main_menu(message, ADMIN_PANEL=True, msg_for_del="False"):
-    if msg_for_del != "False":
+def main_menu(message, ADMIN_PANEL=True, msg_for_del=None):
+    if msg_for_del:
         bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
-        message = msg_for_del
+        message = bot.send_message(chat_id=message.chat.id, text="Запуск....")
     print("    > loading a main_menu")
     main_text = str("@asmemc - канал с новостями "
                     "(подпишитесь пж)\n"
