@@ -12,9 +12,7 @@ import time
 import os
 import shutil
 from datetime import datetime
-import threading
 from groq import Groq
-from telegram.ext import Updater, CommandHandler, CallbackContext
 
 VERSION = "2.0"
 
@@ -100,7 +98,7 @@ except Exception as Except_:
     exit()
 
 print(f" > INITIALISE ADMINS ........ ", end="")
-Audio_Chat = 6615328766
+Audio_Chat = [6615328766, 6811596186]
 print("DONE")
 
 print(f" > INITIALISE ALL BOT FUNC .. ", end="")
@@ -411,7 +409,7 @@ def main_menu(message, ADMIN_PANEL=True):
 
             markup.add(edit_msg, del_msg)
             markup.add(ban, unban)
-            if message.chat.id == Audio_Chat:
+            if message.chat.id in Audio_Chat:
                 deladm = types.InlineKeyboardButton("Убрать админку", callback_data="deladm")
                 addadm = types.InlineKeyboardButton("Выдать админку", callback_data="addadm")
                 backup_db = types.InlineKeyboardButton("Бекап базы данных", callback_data="backupbd")
