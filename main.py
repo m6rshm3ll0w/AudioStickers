@@ -341,7 +341,8 @@ def start(message):
                                              f"команда бота @asmembot\n\n"
                                              f"для пропуска нажмите /skip\n"
                                              f"по вопросам пишите 'm1k0.netlify.app/botform' ", reply_markup=markup)
-        bot.register_next_step_handler(message, main_menu, msg_for_del=sent_message)
+        time.sleep(15)
+        main_menu(sent_message)
     else:
         sent_message = bot.send_message(message.chat.id, "Запуск...")
         check_user_last_time(message)
@@ -349,10 +350,7 @@ def start(message):
         main_menu(sent_message)
 
 
-def main_menu(message, ADMIN_PANEL=True, msg_for_del=None):
-    if msg_for_del:
-        bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
-        message = bot.send_message(chat_id=message.chat.id, text="Запуск....")
+def main_menu(message, ADMIN_PANEL=True):
     print("    > loading a main_menu")
     main_text = str("@asmemc - канал с новостями "
                     "(подпишитесь пж)\n"
