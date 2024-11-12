@@ -49,15 +49,14 @@ class Text2ImageAPI:
             time.sleep(delay)
 
 
+api: Text2ImageAPI
+
 
 def txt2img(PROMPT, BY):
     if PROMPT == "":
         PROMPT1 = "Очень пушистый милый кот в шляпе, 3D мир, Blender, Рендеринг"
     else:
         PROMPT1 = PROMPT
-    api = Text2ImageAPI('https://api-key.fusionbrain.ai/',
-                        '3D0ECE83D2EE48556200E110FF1123DB',
-                        'B91EABAD9532F00C382EF41C6A106F58')
     model_id = api.get_model()
     uuidg = api.generate(PROMPT1, model_id, images=1, width=1024, height=1024)
     images = api.check_generation(uuidg)
@@ -69,15 +68,14 @@ def txt2img(PROMPT, BY):
     else:
         SCR = f"img/img---{FID}---{PROMPT[:30]}---@{BY}.jpg"
 
-
     with open(SCR, "wb") as file:
         file.write(image_data)
         file.close()
-    # list.append(SCR)
     return SCR
 
 
-def INITIAL_API():
+def INITIAL_API(KEY, SECRET):
+    global api
     api = Text2ImageAPI('https://api-key.fusionbrain.ai/',
-                            '3D0ECE83D2EE48556200E110FF1123DB',
-                            'B91EABAD9532F00C382EF41C6A106F58')
+                        KEY,
+                        SECRET)
