@@ -9,7 +9,7 @@ def groq_init(KEY):
     print(f" > INITIALISE GroqAPI ....... ", end="")
     try:
         # noinspection SpellCheckingInspection
-        GroqCloudAPISECRETKEY = "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"
+        GroqCloudAPISECRETKEY = KEY
         client = Groq(
             api_key=GroqCloudAPISECRETKEY,
         )
